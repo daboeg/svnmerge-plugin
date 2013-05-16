@@ -38,10 +38,15 @@ public class IntegrationPublisher extends Publisher {
         if(build.getResult().isWorseThan(Result.SUCCESS))
             return true;
 
+        
         IntegrateAction ia = build.getAction(IntegrateAction.class);
         if(ia==null) {
-            listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
-            return false;
+            listener.getLogger().println("Unable to determine Upstream Subversion URL, trying root build.");
+            ia = build.getRootBuild().getAction(IntegrateAction.class);
+            if (ia==null) {
+                listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
+                return false;
+            }
         }
 
         if(ia.perform(listener,new IntegrateSetting())<0)
