@@ -328,8 +328,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
                         SVNCommitClient cc = cm.getCommitClient();
 
-                        if (false) {
-                            // taking Jack Repennings advise not to do this.
+                        if (true) {
+                            // Taken from the svnbook to allow reuse of a branch:
+                            // http://svnbook.red-bean.com/en/1.6/svn.branchmerge.advanced.html#svn.branchmerge.advanced.reintegratetwice
 
                             // if the trunk merge produces a commit M, then we want to do "svn merge --record-only -c M <UpstreamURL>"
                             // to convince Subversion not to try to merge rev.M again when re-integrating from the trunk in the future,
@@ -345,19 +346,21 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                             cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
                         }
 
-                        // this is the black magic part, but my experiments reveal that we need to run trunk->branch merge --reintegrate
-                        // or else future rebase fails
-                        logger.printf("Merging change from the upstream %s at rev.%s\n",up,trunkCommit);
-                        dc.doMergeReIntegrate(up, SVNRevision.create(trunkCommit), mr, false);
-                        if(foundConflict[0]) {
-                            uc.doSwitch(mr, wsState.getURL(), wsState.getRevision(), wsState.getRevision(), INFINITY, false, true);
-                            logger.println("Conflict found. Please sync with the upstream to resolve this error.");
-                            return new IntegrationResult(-1,mergeRev);
+                        if (false) {
+                            // this is the black magic part, but my experiments reveal that we need to run trunk->branch merge --reintegrate
+                            // or else future rebase fails
+                            logger.printf("Merging change from the upstream %s at rev.%s\n",up,trunkCommit);
+                            dc.doMergeReIntegrate(up, SVNRevision.create(trunkCommit), mr, false);
+                            if(foundConflict[0]) {
+                                uc.doSwitch(mr, wsState.getURL(), wsState.getRevision(), wsState.getRevision(), INFINITY, false, true);
+                                logger.println("Conflict found. Please sync with the upstream to resolve this error.");
+                                return new IntegrationResult(-1,mergeRev);
+                            }
+                            
+                            String msg = RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing with the integration commit that was just made in rev."+trunkCommit;
+                            SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
+                            logger.println("  committed revision "+bci.getNewRevision());
                         }
-
-                        String msg = RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing with the integration commit that was just made in rev."+trunkCommit;
-                        SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
-                        logger.println("  committed revision "+bci.getNewRevision());
                     }
 
                     // -1 is returned if there was no commit, so normalize that to 0
