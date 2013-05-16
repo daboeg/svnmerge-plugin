@@ -5,3 +5,5 @@ target
 experiment/repo
 experiment/ws
 work
+.svn
+nbactions.xml

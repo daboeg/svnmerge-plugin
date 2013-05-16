@@ -49,6 +49,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.tmatesoft.svn.core.SVNDepth.*;
+import org.tmatesoft.svn.core.SVNErrorMessage;
 import static org.tmatesoft.svn.core.wc.SVNRevision.*;
 
 /**
@@ -145,7 +146,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      */
     public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider(getOwner());
         return owner.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -243,7 +244,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
         final Long lastIntegrationSourceRevision = getlastIntegrationSourceRevision();
 
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider(getOwner());
         return owner.getModuleRoot().act(new FileCallable<IntegrationResult>() {
             public IntegrationResult invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -270,7 +271,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(null);
+                        final SVNException eureka = new SVNException(SVNErrorMessage.create(null));
                         try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
