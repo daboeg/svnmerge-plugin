@@ -4,6 +4,7 @@ import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildBadgeAction;
+import hudson.model.Cause;
 import hudson.model.Fingerprint;
 import hudson.model.Fingerprint.RangeSet;
 import hudson.model.Queue.Task;
@@ -188,7 +189,18 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     }
 
     private String getCommitMessage() {
-        return COMMIT_MESSAGE_PREFIX + build.getFullDisplayName()+ COMMIT_MESSAGE_SUFFIX;
+        StringBuilder message = new StringBuilder();
+        message.append(COMMIT_MESSAGE_PREFIX + build.getFullDisplayName()+ COMMIT_MESSAGE_SUFFIX);
+        message.append("\n\nChange Set:\n");
+        for (Entry change: build.getChangeSet()) {
+            message.append(change.getAuthor().getId());
+            message.append(" (r");
+            message.append(change.getCommitId());
+            message.append(") - ");
+            message.append(change.getMsg());
+            message.append("\n");
+        }
+        return message.toString();
     }
 
     /**
