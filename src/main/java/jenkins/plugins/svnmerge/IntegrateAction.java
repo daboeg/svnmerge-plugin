@@ -194,7 +194,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
         message.append("\n\nChange Set:\n");
         for (Entry change: build.getChangeSet()) {
             message.append(change.getAuthor().getId());
-            message.append(" (r");
+            message.append(" (rev ");
             message.append(change.getCommitId());
             message.append(") - ");
             message.append(change.getMsg());
