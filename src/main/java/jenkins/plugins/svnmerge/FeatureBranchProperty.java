@@ -89,7 +89,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?, ?>> im
         return Jenkins.getInstance().getItemByFullName(upstream, AbstractProject.class);
     }
 
-    public ModuleLocation getUpstreamSubversionLocation(AbstractProject<?, ?> upstreamProject) {
+    public ModuleLocation getUpstreamSubversionLocation() {
+        AbstractProject<?,?> upstreamProject = getUpstreamProject();
         if (upstreamProject != null) {
             SCM scm = upstreamProject.getScm();
             if (scm instanceof SubversionSCM) {
@@ -104,17 +105,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?, ?>> im
      * Gets the {@link #getUpstreamSubversionLocation()} as {@link SVNURL}
      */
     public SVNURL getUpstreamURL() throws SVNException {
-        return getUpstreamURL(null);
-    }
-
-    /**
-     * Gets the {@link #getUpstreamSubversionLocation()} as {@link SVNURL}
-     */
-    private SVNURL getUpstreamURL(AbstractProject<?, ?> upstreamProject) throws SVNException {
-        if (upstreamProject == null) {
-            upstreamProject = getUpstreamProject();
-        }
-        ModuleLocation location = getUpstreamSubversionLocation(upstreamProject);
+        ModuleLocation location = getUpstreamSubversionLocation();
         if (location == null) {
             return null;
         }
@@ -163,7 +154,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?, ?>> im
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider(getOwner());
         final SVNURL up;
         try {
-             up = getUpstreamURL(Jenkins.getInstance().getItemByFullName(upstream, AbstractProject.class));
+             up = getUpstreamURL();
         } catch (SVNException e) {
             throw new IOException2("Failed to merge", e);
         }
@@ -262,7 +253,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?, ?>> im
         final Long lastIntegrationSourceRevision = getlastIntegrationSourceRevision();
         final SVNURL up;
         try {
-             up = getUpstreamURL(Jenkins.getInstance().getItemByFullName(upstream, AbstractProject.class));
+             up = getUpstreamURL();
         } catch (SVNException e) {
             throw new IOException2("Failed to merge", e);
         }
