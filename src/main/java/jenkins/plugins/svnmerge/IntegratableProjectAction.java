@@ -2,30 +2,33 @@ package jenkins.plugins.svnmerge;
 
 import hudson.BulkChange;
 import hudson.Util;
+import hudson.model.Action;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
-import hudson.model.Action;
+import hudson.scm.SvnClientManager;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
-import jenkins.model.Jenkins;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-import org.tmatesoft.svn.core.SVNException;
-import org.tmatesoft.svn.core.SVNNodeKind;
-import org.tmatesoft.svn.core.SVNURL;
-import org.tmatesoft.svn.core.wc.SVNClientManager;
-import org.tmatesoft.svn.core.wc.SVNInfo;
-import org.tmatesoft.svn.core.wc.SVNRevision;
 
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.servlet.ServletException;
+
+import jenkins.model.Jenkins;
+
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+import org.tmatesoft.svn.core.SVNException;
+import org.tmatesoft.svn.core.SVNNodeKind;
+import org.tmatesoft.svn.core.SVNURL;
+import org.tmatesoft.svn.core.wc.SVNInfo;
+import org.tmatesoft.svn.core.wc.SVNRevision;
 
 /**
  * Project-level {@link Action} that shows the feature branches.
@@ -75,16 +78,22 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         return r;
     }
 
-    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach) throws ServletException, IOException {
+    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach, @QueryParameter String commitMessage) throws ServletException, IOException {
         requirePOST();
 
         name = Util.fixEmptyAndTrim(name);
-
+        
         if (name==null) {
             sendError("Name is required");
             return;
         }
 
+        commitMessage = Util.fixEmptyAndTrim(commitMessage);
+
+        if (commitMessage==null) {
+            commitMessage = "Created a feature branch from Jenkins";
+        }
+        
         SCM scm = project.getScm();
         if (!(scm instanceof SubversionSCM)) {
             sendError("This project doesn't use Subversion as SCM");
@@ -93,7 +102,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
-        String url = svn.getLocations()[0].getURL();
+        ModuleLocation firstLocation = svn.getLocations()[0];
+		String url = firstLocation.getURL();
         Matcher m = KEYWORD.matcher(url);
         if(!m.find()) {
             sendError("Unable to infer the new branch name from "+url);
@@ -102,7 +112,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         url = url.substring(0,m.start())+"/branches/"+name;
 
         if(!attach) {
-            SVNClientManager svnm = SubversionSCM.createSvnClientManager(project);
+            SvnClientManager svnm = SubversionSCM.createClientManager(
+            		svn.createAuthenticationProvider(project, firstLocation));
             try {
                 SVNURL dst = SVNURL.parseURIEncoded(url);
 
@@ -123,9 +134,9 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 
                 // create a branch
                 svnm.getCopyClient().doCopy(
-                    svn.getLocations()[0].getSVNURL(), SVNRevision.HEAD,
+                    firstLocation.getSVNURL(), SVNRevision.HEAD,
                     dst, false, true,
-                    "Created a feature branch from Jenkins");
+                    commitMessage);
             } catch (SVNException e) {
                 sendError(e);
                 return;
@@ -133,7 +144,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         }
 
         // copy a job, and adjust its properties for integration
-        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name);
+        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name.replaceAll("/", "-"));
         BulkChange bc = new BulkChange(copy);
         try {
             copy.removeProperty(IntegratableProject.class);
@@ -142,13 +153,17 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             SubversionSCM svnScm = (SubversionSCM)copy.getScm();
             copy.setScm(
                     new SubversionSCM(
-                            Arrays.asList(new ModuleLocation(url,name)),
-                                svnScm.getWorkspaceUpdater(), svnScm.getBrowser(),
+                            Arrays.asList(firstLocation.withRemote(url)),
+                                svnScm.getWorkspaceUpdater(),
+                                svnScm.getBrowser(),
                                 svnScm.getExcludedRegions(),
                                 svnScm.getExcludedUsers(),
                                 svnScm.getExcludedRevprop(),
                                 svnScm.getExcludedCommitMessages(),
-                                svnScm.getIncludedRegions()
+                                svnScm.getIncludedRegions(),
+                                svnScm.isIgnoreDirPropChanges(),
+                                svnScm.isFilterChangelog(),
+                                svnScm.getAdditionalCredentials()
                             ));
         } finally {
             bc.commit();
