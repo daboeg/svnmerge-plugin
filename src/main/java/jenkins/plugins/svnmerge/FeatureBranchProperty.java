@@ -55,6 +55,13 @@ import java.util.logging.Logger;
 
 import static org.tmatesoft.svn.core.SVNDepth.*;
 import org.tmatesoft.svn.core.SVNErrorMessage;
+import org.tmatesoft.svn.core.internal.wc.DefaultSVNOptions;
+import org.tmatesoft.svn.core.wc.ISVNConflictHandler;
+import org.tmatesoft.svn.core.wc.SVNConflictChoice;
+import org.tmatesoft.svn.core.wc.SVNConflictDescription;
+import org.tmatesoft.svn.core.wc.SVNConflictReason;
+import org.tmatesoft.svn.core.wc.SVNConflictResult;
+import org.tmatesoft.svn.core.wc.SVNMergeFileSet;
 import static org.tmatesoft.svn.core.wc.SVNRevision.*;
 
 /**
@@ -72,20 +79,30 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
      * Upstream job name.
      */
     private String upstream;
+    
+    /**
+     * Use mine-conflict mode to resolve conflicts.
+     */
+    private boolean useMineConflict=false;
     private transient RebaseAction rebaseAction;
 
     @DataBoundConstructor
-    public FeatureBranchProperty(String upstream) {
+    public FeatureBranchProperty(String upstream, boolean useMineConflict) {
         if (upstream == null) {
             throw new NullPointerException("upstream");
         }
         this.upstream = upstream;
+        this.useMineConflict = useMineConflict;
     }
-
+    
     public String getUpstream() {
         return upstream;
     }
 
+    public boolean getUseMineConflict() {
+        return useMineConflict;
+    }
+    
     /**
      * Gets the upstream project, or null if no such project was found.
      */
@@ -322,6 +339,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
                     logger.printf("Merging %s (rev.%s) to the upstream\n", mergeUrl, mergeRev);
                     SVNDiffClient dc = cm.getDiffClient();
+                    DefaultSVNOptions options = (DefaultSVNOptions) dc.getOptions();
+                    if (useMineConflict) {
+                        options.setConflictHandler(new MineConflictHandler());
+                    }
                     dc.doMergeReIntegrate(
                             mergeUrl,
                             mergeRev, mr, false);
@@ -461,4 +482,22 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
         }
     }
     private static final Logger LOGGER = Logger.getLogger(FeatureBranchProperty.class.getName());
+    
+     /**
+     * Conflict resolver which always selects the local version of a file.
+     * 
+     * @version 1.3
+     * @author  TMate Software Ltd.
+     */
+    private static class MineConflictHandler implements ISVNConflictHandler {
+        public SVNConflictResult handleConflict(SVNConflictDescription conflictDescription) throws SVNException {
+            SVNConflictReason reason = conflictDescription.getConflictReason();
+            SVNMergeFileSet mergeFiles = conflictDescription.getMergeFiles();
+            
+            SVNConflictChoice choice = SVNConflictChoice.MINE_CONFLICT;
+            System.out.println("Automatically resolving conflict for " + mergeFiles.getWCFile() + 
+                    ", choosing " + (choice == SVNConflictChoice.MINE_FULL ? "local file" : "repository file"));
+            return new SVNConflictResult(choice, mergeFiles.getResultFile()); 
+        }
+    }
 }

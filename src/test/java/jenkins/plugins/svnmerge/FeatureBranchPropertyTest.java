@@ -17,7 +17,7 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 
     public void testConfigRoundtrip2() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.addProperty(new FeatureBranchProperty("xyz"));
+        p.addProperty(new FeatureBranchProperty("xyz",false));
         HtmlPage page = new WebClient().getPage(p, "configure");
         submit(page.getFormByName("config"));
         FeatureBranchProperty ujp = p.getProperty(FeatureBranchProperty.class);

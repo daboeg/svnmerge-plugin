@@ -60,7 +60,7 @@ public class MergeTest extends HudsonTestCase {
         // create a project
         p = createFreeStyleProject("b1");
         p.setScm(new SubversionSCM("file://"+new URL(repo,"branches/b1").getPath(),"b1"));
-        upp = new FeatureBranchProperty(trunk.getName());
+        upp = new FeatureBranchProperty(trunk.getName(),false);
         p.addProperty(upp);
 
         // check out workspace so that we can simulate commits outside Jenkins

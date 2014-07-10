@@ -13,6 +13,9 @@ f.optionalBlock(name:"svnmerge", title:_("This project builds a Subversion featu
                     }
                 }
             }
+            f.entry(title:_("Auto-accept upstream conflict"), field:"useMineConflict") {
+                f.checkbox()
+            }
         }
     }
 }
