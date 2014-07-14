@@ -22,15 +22,21 @@ public class RebaseBuilder extends Builder {
      * {@link Permalink#getId() id} of the permalink to rebase with.
      */
     public final String permalink;
+    
+    /**
+     * Record the merge only during rebase.
+     */
+    public boolean recordOnly=false;
 
     @DataBoundConstructor
-    public RebaseBuilder(String permalink) {
+    public RebaseBuilder(String permalink, boolean recordOnly) {
         this.permalink = permalink;
+        this.recordOnly = recordOnly;
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(permalink));
+        new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(permalink, recordOnly));
         return true;
     }
 

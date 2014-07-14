@@ -65,8 +65,8 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
 
     protected RebaseSetting createParams(StaplerRequest req) {
         String id = req.getParameter("permalink");
-        if (id!=null)   return new RebaseSetting(id);
-        else            return new RebaseSetting(-1);
+        if (id!=null)   return new RebaseSetting(id, false);
+        else            return new RebaseSetting(-1, false);
     }
 
     @Override
@@ -81,6 +81,7 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
      */
     /*package*/ long perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
         long rev = param.revision;
+        boolean recordOnly = param.recordOnly;
 
         if (param.permalink!=null) {
             AbstractProject<?, ?> up = getProperty().getUpstreamProject();
@@ -102,7 +103,7 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
             }
         }
 
-        long integratedRevision = getProperty().rebase(listener, rev);
+        long integratedRevision = getProperty().rebase(listener, rev, recordOnly);
 //        if(integratedRevision>0) {
 //            // record this integration as a fingerprint.
 //            // this will allow us to find where this change is integrated.

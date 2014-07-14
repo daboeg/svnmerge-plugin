@@ -170,7 +170,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
      * failed and the failure was handled gracefully (typically this means a
      * merge conflict.)
      */
-    public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
+    public long rebase(final TaskListener listener, final long upstreamRev, final boolean recordOnly) throws IOException, InterruptedException {
         final SubversionSCM svn = (SubversionSCM) getOwner().getScm();
         final ISVNAuthenticationProvider provider = svn.createAuthenticationProvider(getOwner(), svn.getLocations()[0]);
 
@@ -208,7 +208,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
                     logger.printf("Merging change from the upstream %s at rev.%s\n", up, mergeRev);
                     SVNRevisionRange r = new SVNRevisionRange(SVNRevision.create(0), mergeRev);
-                    dc.doMerge(up, mergeRev, Arrays.asList(r), mr, INFINITY, true, false, false, false);
+                    dc.doMerge(up, mergeRev, Arrays.asList(r), mr, INFINITY, true, false, false, recordOnly);
                     if (foundConflict[0]) {
                         logger.println("Found conflict. Reverting this failed merge");
                         wc.doRevert(new File[]{mr}, INFINITY, null);
